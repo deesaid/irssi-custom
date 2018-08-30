@@ -294,6 +294,8 @@ static void sig_reconnect(SERVER_REC *server)
 		     rec->last_connect < now-FAILED_RECONNECT_WAIT)) {
 			if (rec == sserver)
                                 conn->port = server->connrec->port;
+			if (server->connrec->password != NULL)
+				conn->password = g_strdup(server->connrec->password);
 			sserver_connect(rec, conn);
 			return;
 		}
@@ -310,6 +312,8 @@ static void sig_reconnect(SERVER_REC *server)
 		else if (use_next && sserver_connect_ok(rec, conn->chatnet)) {
 			if (rec == sserver)
                                 conn->port = server->connrec->port;
+			if (server->connrec->password != NULL)
+				conn->password = g_strdup(server->connrec->password);
 			sserver_connect(rec, conn);
 			break;
 		}
