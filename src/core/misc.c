@@ -410,6 +410,90 @@ char *convert_home(const char *path)
 	}
 }
 
+/**
+ * String tokenizer.
+ *
+ * @param cur posicion actual
+ * @param delim delimitador
+ *
+ * @return longitud del texto adecuado
+ */
+char *strsepstr(char **cur, char *delim)
+{
+	char *ret = *cur; /* Return value. */
+	char *start = NULL; /* The start of the found delim string. */
+
+	if(*cur == NULL)
+		return ret;
+
+	start = strstr(*cur, delim);
+
+	if (start != NULL) {
+		*start = '\0'; /* Null terminate token. */
+		*cur = start; /* Move the current pointer forward to delim. */
+
+		/* Find end of delim. */
+		*cur += strlen(delim);
+	} else {
+		*cur = NULL;
+	}
+
+	return ret;
+}
+
+#define MACROTAG_START	"${"
+#define MACROTAG_END	"}"
+
+char *expand_envvars(const char *path)
+{
+	char *p = NULL, *aux = NULL, *posEnd = NULL, *enVal = NULL;
+	char varAux[256] = {0};
+	char valor[1024] = {0};
+	char fnameAux[4096] = {0};
+	int len = 0;
+
+	if(path == NULL)
+		return NULL;
+
+	char *fileName = g_strdup(path);
+
+	p = fileName;
+
+	while((aux=strsepstr(&p,(char*)MACROTAG_START)))
+	{
+		posEnd = strstr(aux,MACROTAG_END);
+
+		// Primer fragmento, ultimo fragmento o cadena mal formada, lo anyadimos al lote
+		if(aux == fileName || posEnd == NULL)
+		{
+			strncat(fnameAux,aux,sizeof(fnameAux));
+		}
+		// Fragmentos de en medio
+		else
+		{
+			memset(varAux,0,sizeof(varAux));
+			memset(valor,0,sizeof(valor));
+
+			len = posEnd - aux;
+			strncpy(varAux,aux,len);
+
+			enVal = getenv(varAux);
+
+			if(enVal)
+			{
+				strncat(fnameAux,enVal,sizeof(fnameAux));
+			}
+
+			strncat(fnameAux,posEnd+1,sizeof(fnameAux));
+		}
+	}
+
+
+	g_free(fileName);
+
+	return g_strdup(fnameAux);
+}
+
 int g_istr_equal(gconstpointer v, gconstpointer v2)
 {
 	return g_ascii_strcasecmp((const char *) v, (const char *) v2) == 0;
