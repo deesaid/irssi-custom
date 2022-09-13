@@ -456,7 +456,7 @@ char *strsepstr(char **cur, char *delim)
 
 char *expand_envvars(const char *path)
 {
-	char *p = NULL, *aux = NULL, *posEnd = NULL, *enVal = NULL;
+	char *p = NULL, *aux = NULL, *posEnd = NULL, *enVal = NULL, *fileName = NULL;
 	char varAux[256] = {0};
 	char valor[1024] = {0};
 	char fnameAux[4096] = {0};
@@ -465,7 +465,7 @@ char *expand_envvars(const char *path)
 	if(path == NULL)
 		return NULL;
 
-	char *fileName = g_strdup(path);
+	fileName = g_strdup(path);
 
 	p = fileName;
 

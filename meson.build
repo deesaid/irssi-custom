@@ -1,6 +1,6 @@
 project('irssi', 'c',
   version : '1.5-head',
-  meson_version : '>=0.53',
+  meson_version : '>=0.49',
   default_options : ['warning_level=1'])
 
 ############################
@@ -53,10 +53,10 @@ want_static_dependency = get_option('static-dependency') == 'yes'
 
 package_version     = get_option('PACKAGE_VERSION') != '' ? get_option('PACKAGE_VERSION') : meson.project_version()
 
-fs = import('fs')
-if fs.exists('config.status') or fs.exists('irssi-version.h') or fs.exists('default-config.h') or fs.exists('default-theme.h') or fs.exists('src/perl/irssi-core.pl.h') or fs.exists('src/perl/perl-signals-list.h') or fs.exists('irssi-config.h')
-  error('this tree has been configured with autotools, cannot proceed')
-endif
+#fs = import('fs')
+#if fs.exists('config.status') or fs.exists('irssi-version.h') or fs.exists('default-config.h') or fs.exists('default-theme.h') or fs.exists('src/perl/irssi-core.pl.h') or fs.exists('src/perl/perl-signals-list.h') or fs.exists('irssi-config.h')
+#  error('this tree has been configured with autotools, cannot proceed')
+#endif
 
 UNSET = '=INVALID='
 UNSET_ARR = [UNSET]
