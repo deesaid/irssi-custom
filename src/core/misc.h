@@ -47,6 +47,9 @@ GList *optlist_remove_known(const char *cmd, GHashTable *optlist);
 /* convert ~/ to $HOME */
 char *convert_home(const char *path);
 
+/* Expand environment variables */
+char *expand_envvars(const char *path);
+
 /* Case-insensitive string hash functions */
 int i_istr_equal(gconstpointer v, gconstpointer v2);
 unsigned int i_istr_hash(gconstpointer v);
