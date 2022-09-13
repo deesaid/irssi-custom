@@ -86,7 +86,7 @@ static void irc_channels_join(IRC_SERVER_REC *server, const char *data,
 	char *channels, *keys, *key, *space;
 	char **chanlist, **keylist, **tmp, **tmpkey, **tmpstr, *channel, *channame;
 	void *free_arg;
-	int use_keys, cmdlen;
+	int use_keys, cmdlen, numchans;
 
 	g_return_if_fail(data != NULL);
 	g_return_if_fail(IS_IRC_SERVER(server) && server->connected);
@@ -111,6 +111,7 @@ static void irc_channels_join(IRC_SERVER_REC *server, const char *data,
 	use_keys = *keys != '\0';
 	tmpkey = keylist;
 	tmp = chanlist;
+	numchans = 0;
 	for (;; tmp++) {
 		if (*tmp !=  NULL) {
 			channel = force_channel_name(server, *tmp);
@@ -155,7 +156,8 @@ static void irc_channels_join(IRC_SERVER_REC *server, const char *data,
 			/* don't try to send too long lines
 			   make sure it's not longer than 510
 			   so 510 - strlen("JOIN ") = 505 */
-			if (cmdlen < server->max_message_len - 5 /* strlen("JOIN ") */)
+			if (cmdlen < server->max_message_len - 5 /* strlen("JOIN ") */
+				&& ++numchans < MAX_CHAN_JOIN)
 				continue;
 		}
 		if (outchans->len > 0) {
@@ -168,6 +170,7 @@ static void irc_channels_join(IRC_SERVER_REC *server, const char *data,
 				irc_send_cmdv(IRC_SERVER(server), "JOIN %s", outchans->str);
 		}
 		cmdlen = 0;
+		numchans = 0;
 		g_string_truncate(outchans,0);
 		g_string_truncate(outkeys,0);
 		if (*tmp == NULL || tmp[1] == NULL)
