@@ -363,7 +363,7 @@ static void strip_params_colon(char *const params)
 }
 
 static void irc_server_event(IRC_SERVER_REC *server, const char *line,
-			     const char *nick, const char *address)
+			     const char *nick, const char *address, const char *tags)
 {
         const char *signal;
 	char *event, *args;
@@ -386,8 +386,8 @@ static void irc_server_event(IRC_SERVER_REC *server, const char *line,
 
         /* emit it */
 	current_server_event = event+6;
-	if (!signal_emit(signal, 4, server, args, nick, address))
-		signal_emit_id(signal_default_event, 4, server, line, nick, address);
+	if (!signal_emit(signal, 5, server, args, nick, address, tags))
+		signal_emit_id(signal_default_event, 5, server, line, nick, address, tags);
 	current_server_event = NULL;
 
 	g_free(event);
@@ -470,7 +470,7 @@ static void irc_server_event_tags(IRC_SERVER_REC *server, const char *line, cons
 	}
 
 	if (*line != '\0')
-		signal_emit_id(signal_server_event, 4, server, line, nick, address);
+		signal_emit_id(signal_server_event, 5, server, line, nick, address, tags);
 
 	if (tags_hash != NULL)
 		g_hash_table_destroy(tags_hash);
