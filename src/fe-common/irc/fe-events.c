@@ -44,7 +44,7 @@
 #include <irssi/src/fe-common/irc/fe-irc-channels.h>
 
 static void event_privmsg(IRC_SERVER_REC *server, const char *data,
-			  const char *nick, const char *addr)
+			  const char *nick, const char *addr, const char *tags)
 {
 	char *params, *target, *msg, *recoded;
 
@@ -90,7 +90,7 @@ static void ctcp_action(IRC_SERVER_REC *server, const char *data,
 }
 
 static void event_notice(IRC_SERVER_REC *server, const char *data,
-			 const char *nick, const char *addr)
+			 const char *nick, const char *addr, const char *tags)
 {
 	char *params, *target, *msg, *recoded;
 
@@ -111,7 +111,7 @@ static void event_notice(IRC_SERVER_REC *server, const char *data,
 }
 
 static void event_join(IRC_SERVER_REC *server, const char *data,
-		       const char *nick, const char *addr)
+		       const char *nick, const char *addr, const char *tags)
 {
 	char *params, *channel, *tmp, *account, *realname;
 
@@ -127,7 +127,7 @@ static void event_join(IRC_SERVER_REC *server, const char *data,
 }
 
 static void event_chghost(IRC_SERVER_REC *server, const char *data,
-			  const char *nick, const char *addr)
+			  const char *nick, const char *addr, const char *tags)
 {
 	char *params, *user, *host, *new_addr;
 
@@ -143,7 +143,7 @@ static void event_chghost(IRC_SERVER_REC *server, const char *data,
 }
 
 static void event_account(IRC_SERVER_REC *server, const char *data,
-			  const char *nick, const char *addr)
+			  const char *nick, const char *addr, const char *tags)
 {
 	char *params, *account;
 
@@ -157,7 +157,7 @@ static void event_account(IRC_SERVER_REC *server, const char *data,
 }
 
 static void event_part(IRC_SERVER_REC *server, const char *data,
-		       const char *nick, const char *addr)
+		       const char *nick, const char *addr, const char *tags)
 {
 	char *params, *channel, *reason, *recoded;
 
@@ -173,7 +173,7 @@ static void event_part(IRC_SERVER_REC *server, const char *data,
 }
 
 static void event_quit(IRC_SERVER_REC *server, const char *data,
-		       const char *nick, const char *addr)
+		       const char *nick, const char *addr, const char *tags)
 {
 	char *recoded;
 
@@ -186,7 +186,7 @@ static void event_quit(IRC_SERVER_REC *server, const char *data,
 }
 
 static void event_kick(IRC_SERVER_REC *server, const char *data,
-		       const char *kicker, const char *addr)
+		       const char *kicker, const char *addr, const char *tags)
 {
 	char *params, *channel, *nick, *reason, *recoded;
 
@@ -203,7 +203,7 @@ static void event_kick(IRC_SERVER_REC *server, const char *data,
 }
 
 static void event_kill(IRC_SERVER_REC *server, const char *data,
-		       const char *nick, const char *addr)
+		       const char *nick, const char *addr, const char *tags)
 {
 	char *params, *path, *reason;
 
@@ -235,7 +235,7 @@ static void event_kill(IRC_SERVER_REC *server, const char *data,
 }
 
 static void event_nick(IRC_SERVER_REC *server, const char *data,
-		       const char *sender, const char *addr)
+		       const char *sender, const char *addr, const char *tags)
 {
 	char *params, *newnick;
 
@@ -252,7 +252,7 @@ static void event_nick(IRC_SERVER_REC *server, const char *data,
 }
 
 static void event_mode(IRC_SERVER_REC *server, const char *data,
-		       const char *nick, const char *addr)
+		       const char *nick, const char *addr, const char *tags)
 {
 	char *params, *channel, *mode;
 
@@ -268,7 +268,7 @@ static void event_mode(IRC_SERVER_REC *server, const char *data,
 }
 
 static void event_away_notify(IRC_SERVER_REC *server, const char *data,
-			      const char *nick, const char *addr)
+			      const char *nick, const char *addr, const char *tags)
 {
 	char *params, *awaymsg;
 
@@ -282,7 +282,7 @@ static void event_away_notify(IRC_SERVER_REC *server, const char *data,
 	g_free(params);
 }
 
-static void event_pong(IRC_SERVER_REC *server, const char *data, const char *nick)
+static void event_pong(IRC_SERVER_REC *server, const char *data, const char *nick, const char *tags)
 {
 	char *params, *host, *reply;
 
@@ -295,7 +295,7 @@ static void event_pong(IRC_SERVER_REC *server, const char *data, const char *nic
 }
 
 static void event_invite(IRC_SERVER_REC *server, const char *data,
-			 const char *nick, const char *addr)
+			 const char *nick, const char *addr, const char *tags)
 {
 	char *params, *invited, *channel;
 
@@ -313,7 +313,7 @@ static void event_invite(IRC_SERVER_REC *server, const char *data,
 }
 
 static void event_topic(IRC_SERVER_REC *server, const char *data,
-			const char *nick, const char *addr)
+			const char *nick, const char *addr, const char *tags)
 {
 	char *params, *channel, *topic, *recoded;
 
@@ -336,7 +336,7 @@ static void event_error(IRC_SERVER_REC *server, const char *data)
 	printformat(server, NULL, MSGLEVEL_CRAP, IRCTXT_ERROR, data);
 }
 
-static void event_wallops(IRC_SERVER_REC *server, const char *data, const char *nick, const char *addr)
+static void event_wallops(IRC_SERVER_REC *server, const char *data, const char *nick, const char *addr, const char *tags)
 {
 	g_return_if_fail(data != NULL);
 
@@ -359,7 +359,7 @@ static void event_wallops(IRC_SERVER_REC *server, const char *data, const char *
 	}
 }
 
-static void event_silence(IRC_SERVER_REC *server, const char *data, const char *nick, const char *addr)
+static void event_silence(IRC_SERVER_REC *server, const char *data, const char *nick, const char *addr, const char *tags)
 {
 	g_return_if_fail(data != NULL);
 
@@ -473,11 +473,26 @@ static void sig_whowas_event_end(IRC_SERVER_REC *server, const char *data,
 	g_free(params);
 }
 
+static void event_whisper(IRC_SERVER_REC *server, const char *data,
+                           const char *nick, const char *addr, const char *tags)
+{
+	// TODO: Mejorar
+        printtext(server, NULL, MSGLEVEL_HILIGHT, "@%s :%s!%s WHISPER %s", tags, nick, addr, data);
+}
+
 static void event_received(IRC_SERVER_REC *server, const char *data,
-			   const char *nick, const char *addr)
+			   const char *nick, const char *addr, const char *tags)
 {
 	if (!i_isdigit(*data)) {
-		printtext(server, NULL, MSGLEVEL_CRAP, "%s", data);
+		if (tags != NULL && *tags != '\0') {
+			if (nick != NULL && *nick != '\0' && addr != NULL && *addr != '\0') {
+				printtext(server, NULL, MSGLEVEL_CRAP, "@%s :%s!%s %s", tags, nick, addr, data);
+			} else {
+				printtext(server, NULL, MSGLEVEL_CRAP, "@%s %s", tags, data);
+			}
+		} else {
+			printtext(server, NULL, MSGLEVEL_CRAP, "%s", data);
+		}
 		return;
 	}
 
@@ -506,6 +521,7 @@ void fe_events_init(void)
 	signal_add("event wallops", (SIGNAL_FUNC) event_wallops);
 	signal_add("event silence", (SIGNAL_FUNC) event_silence);
 	signal_add("event away", (SIGNAL_FUNC) event_away_notify);
+	signal_add("event whisper", (SIGNAL_FUNC) event_whisper);
 
 	signal_add("default event", (SIGNAL_FUNC) event_received);
 
@@ -538,6 +554,7 @@ void fe_events_deinit(void)
 	signal_remove("event wallops", (SIGNAL_FUNC) event_wallops);
 	signal_remove("event silence", (SIGNAL_FUNC) event_silence);
 	signal_remove("event away", (SIGNAL_FUNC) event_away_notify);
+	signal_remove("event whisper", (SIGNAL_FUNC) event_whisper);
 
 	signal_remove("default event", (SIGNAL_FUNC) event_received);
 
