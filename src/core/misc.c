@@ -1049,11 +1049,11 @@ static int parse_time_interval_seconds_uint(const char *time, guint *secs)
                 }
 
                 if (g_ascii_strncasecmp(desc, "days", len) == 0 ||
-		    g_ascii_strncasecmp(desc, "day", len) == 0 ||
-                    g_ascii_strncasecmp(desc, "d", len) == 0)
+                         g_ascii_strncasecmp(desc, "day", len) == 0 ||
+                         g_ascii_strncasecmp(desc, "d", len) == 0)
                         *secs += number * 3600*24;
                 else if (g_ascii_strncasecmp(desc, "hours", len) == 0 ||
-			 g_ascii_strncasecmp(desc, "hour", len) == 0 ||
+                         g_ascii_strncasecmp(desc, "hour", len) == 0 ||
                          g_ascii_strncasecmp(desc, "h", len) == 0)
                         *secs += number * 3600;
                 else if (g_ascii_strncasecmp(desc, "minutes", len) == 0 ||
