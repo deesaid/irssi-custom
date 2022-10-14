@@ -56,4 +56,6 @@ IRC_CHANNEL_REC *irc_channel_create(IRC_SERVER_REC *server, const char *name,
 #define irc_channel_find(server, name) \
 	IRC_CHANNEL(channel_find(SERVER(server), name))
 
+#define MAX_CHAN_JOIN 5
+
 #endif
