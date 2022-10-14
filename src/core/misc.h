@@ -86,6 +86,7 @@ int nearest_power(int num);
 /* Returns TRUE / FALSE */
 int parse_uint(const char *nptr, char **endptr, int base, guint *number);
 int parse_time_interval(const char *time, int *msecs);
+int parse_time_interval_seconds(const char *time, int *secs);
 int parse_size(const char *size, int *bytes);
 
 /* Return TRUE if all characters in `str' are numbers.

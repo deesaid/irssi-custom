@@ -15,7 +15,7 @@
     -channels:    Ignores only on specific channels.
     -time:        The timeout to automatically remove the ignore.
                   Accepts units specified in days, hours, minutes, seconds,
-                  milliseconds, or no unit for seconds.
+                  or no unit for seconds.
 
     The mask, channels and levels to ignore; if no argument is provided, the
     list of ignores will be displayed.

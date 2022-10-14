@@ -126,7 +126,7 @@ static void cmd_ignore(const char *data)
 	char *patternarg, *chanarg, *mask, *levels, *timestr, *servertag;
 	char **channels;
 	void *free_arg;
-	int new_ignore, msecs, level, flags;
+	int new_ignore, secs, level, flags;
 
 	if (*data == '\0') {
 		cmd_ignore_show();
@@ -149,10 +149,10 @@ static void cmd_ignore(const char *data)
         if (*levels == '\0') levels = "ALL";
 	level = level2bits(levels, NULL);
 
-	msecs = 0;
+	secs = 0;
 	timestr = g_hash_table_lookup(optlist, "time");
 	if (timestr != NULL) {
-		if (!parse_time_interval(timestr, &msecs))
+		if (!parse_time_interval_seconds(timestr, &secs))
 			cmd_param_error(CMDERR_INVALID_TIME);
 	}
 
@@ -224,8 +224,8 @@ static void cmd_ignore(const char *data)
 	rec->regexp = g_hash_table_lookup(optlist, "regexp") != NULL;
 	rec->fullword = g_hash_table_lookup(optlist, "full") != NULL;
 	rec->replies = g_hash_table_lookup(optlist, "replies") != NULL;
-	if (msecs != 0)
-		rec->unignore_time = time(NULL)+msecs/1000;
+	if (secs != 0)
+		rec->unignore_time = time(NULL)+secs;
 
 	if (new_ignore)
 		ignore_add_rec(rec);

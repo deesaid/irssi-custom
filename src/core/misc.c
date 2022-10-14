@@ -1004,6 +1004,88 @@ static int parse_time_interval_uint(const char *time, guint *msecs)
 	return ret;
 }
 
+static int parse_time_interval_seconds_uint(const char *time, guint *secs)
+{
+        const char *desc;
+        guint number;
+        int len, ret, digits;
+
+        *secs = 0;
+
+        /* max. return value is around 24 days */
+        number = 0; ret = TRUE; digits = FALSE;
+        while (i_isspace(*time))
+                time++;
+        for (;;) {
+                if (i_isdigit(*time)) {
+                        char *endptr;
+                        if (!parse_uint(time, &endptr, 10, &number)) {
+                                return FALSE;
+                        }
+                        time = endptr;
+                        digits = TRUE;
+                        continue;
+                }
+
+                if (!digits)
+                        return FALSE;
+
+                /* skip punctuation */
+                while (*time != '\0' && i_ispunct(*time) && *time != '-')
+                        time++;
+
+                /* get description */
+                for (len = 0, desc = time; i_isalpha(*time); time++)
+                        len++;
+
+                while (i_isspace(*time))
+                        time++;
+
+                if (len == 0) {
+                        if (*time != '\0')
+                                return FALSE;
+                        *secs += number; /* assume seconds */
+                        return TRUE;
+                }
+
+                if (g_ascii_strncasecmp(desc, "days", len) == 0 ||
+		    g_ascii_strncasecmp(desc, "day", len) == 0 ||
+                    g_ascii_strncasecmp(desc, "d", len) == 0)
+                        *secs += number * 3600*24;
+                else if (g_ascii_strncasecmp(desc, "hours", len) == 0 ||
+			 g_ascii_strncasecmp(desc, "hour", len) == 0 ||
+                         g_ascii_strncasecmp(desc, "h", len) == 0)
+                        *secs += number * 3600;
+                else if (g_ascii_strncasecmp(desc, "minutes", len) == 0 ||
+                         g_ascii_strncasecmp(desc, "minute", len) == 0 ||
+                         g_ascii_strncasecmp(desc, "mins", len) == 0 ||
+                         g_ascii_strncasecmp(desc, "min", len) == 0 ||
+                         g_ascii_strncasecmp(desc, "m", len) == 0)
+                        *secs += number * 60;
+                else if (g_ascii_strncasecmp(desc, "seconds", len) == 0 ||
+                         g_ascii_strncasecmp(desc, "second", len) == 0 ||
+                         g_ascii_strncasecmp(desc, "secs", len) == 0 ||
+                         g_ascii_strncasecmp(desc, "sec", len) == 0 ||
+                         g_ascii_strncasecmp(desc, "s", len) == 0)
+                        *secs += number;
+                else {
+                        ret = FALSE;
+                }
+
+                /* skip punctuation */
+                while (*time != '\0' && i_ispunct(*time) && *time != '-')
+                        time++;
+
+                if (*time == '\0')
+                        break;
+
+                number = 0;
+                digits = FALSE;
+        }
+
+        return ret;
+}
+
 static int parse_size_uint(const char *size, guint *bytes)
 {
 	const char *desc;
@@ -1109,6 +1191,23 @@ int parse_time_interval(const char *time, int *msecs)
 	return ret;
 }
 
+int parse_time_interval_seconds(const char *time, int *secs)
+{
+        guint secs_;
+        char *number;
+        int ret, sign;
+
+        parse_number_sign(time, &number, &sign);
+
+        ret = parse_time_interval_seconds_uint(number, &secs_);
+
+        if (secs_ > (1U << 31)) {
+                return FALSE;
+        }
+
+        *secs = secs_ * sign;
+        return ret;
+}
 
 char *ascii_strup(char *str)
 {
