@@ -420,6 +420,90 @@ char *convert_home(const char *path)
 	}
 }
 
+/**
+ * String tokenizer.
+ *
+ * @param cur posicion actual
+ * @param delim delimitador
+ *
+ * @return longitud del texto adecuado
+ */
+char *strsepstr(char **cur, char *delim)
+{
+	char *ret = *cur; /* Return value. */
+	char *start = NULL; /* The start of the found delim string. */
+
+	if(*cur == NULL)
+		return ret;
+
+	start = strstr(*cur, delim);
+
+	if (start != NULL) {
+		*start = '\0'; /* Null terminate token. */
+		*cur = start; /* Move the current pointer forward to delim. */
+
+		/* Find end of delim. */
+		*cur += strlen(delim);
+	} else {
+		*cur = NULL;
+	}
+
+	return ret;
+}
+
+#define MACROTAG_START	"${"
+#define MACROTAG_END	"}"
+
+char *expand_envvars(const char *path)
+{
+	char *p = NULL, *aux = NULL, *posEnd = NULL, *enVal = NULL, *fileName = NULL;
+	char varAux[256] = {0};
+	char valor[1024] = {0};
+	char fnameAux[4096] = {0};
+	int len = 0;
+
+	if(path == NULL)
+		return NULL;
+
+	fileName = g_strdup(path);
+
+	p = fileName;
+
+	while((aux=strsepstr(&p,(char*)MACROTAG_START)))
+	{
+		posEnd = strstr(aux,MACROTAG_END);
+
+		// Primer fragmento, ultimo fragmento o cadena mal formada, lo anyadimos al lote
+		if(aux == fileName || posEnd == NULL)
+		{
+			strncat(fnameAux,aux,sizeof(fnameAux));
+		}
+		// Fragmentos de en medio
+		else
+		{
+			memset(varAux,0,sizeof(varAux));
+			memset(valor,0,sizeof(valor));
+
+			len = posEnd - aux;
+			strncpy(varAux,aux,len);
+
+			enVal = getenv(varAux);
+
+			if(enVal)
+			{
+				strncat(fnameAux,enVal,sizeof(fnameAux));
+			}
+
+			strncat(fnameAux,posEnd+1,sizeof(fnameAux));
+		}
+	}
+
+
+	g_free(fileName);
+
+	return g_strdup(fnameAux);
+}
+
 int i_istr_equal(gconstpointer v, gconstpointer v2)
 {
 	return g_ascii_strcasecmp((const char *) v, (const char *) v2) == 0;
@@ -920,6 +1004,88 @@ static int parse_time_interval_uint(const char *time, guint *msecs)
 	return ret;
 }
 
+static int parse_time_interval_seconds_uint(const char *time, guint *secs)
+{
+        const char *desc;
+        guint number;
+        int len, ret, digits;
+
+        *secs = 0;
+
+        /* max. return value is around 24 days */
+        number = 0; ret = TRUE; digits = FALSE;
+        while (i_isspace(*time))
+                time++;
+        for (;;) {
+                if (i_isdigit(*time)) {
+                        char *endptr;
+                        if (!parse_uint(time, &endptr, 10, &number)) {
+                                return FALSE;
+                        }
+                        time = endptr;
+                        digits = TRUE;
+                        continue;
+                }
+
+                if (!digits)
+                        return FALSE;
+
+                /* skip punctuation */
+                while (*time != '\0' && i_ispunct(*time) && *time != '-')
+                        time++;
+
+                /* get description */
+                for (len = 0, desc = time; i_isalpha(*time); time++)
+                        len++;
+
+                while (i_isspace(*time))
+                        time++;
+
+                if (len == 0) {
+                        if (*time != '\0')
+                                return FALSE;
+                        *secs += number; /* assume seconds */
+                        return TRUE;
+                }
+
+                if (g_ascii_strncasecmp(desc, "days", len) == 0 ||
+                         g_ascii_strncasecmp(desc, "day", len) == 0 ||
+                         g_ascii_strncasecmp(desc, "d", len) == 0)
+                        *secs += number * 3600*24;
+                else if (g_ascii_strncasecmp(desc, "hours", len) == 0 ||
+                         g_ascii_strncasecmp(desc, "hour", len) == 0 ||
+                         g_ascii_strncasecmp(desc, "h", len) == 0)
+                        *secs += number * 3600;
+                else if (g_ascii_strncasecmp(desc, "minutes", len) == 0 ||
+                         g_ascii_strncasecmp(desc, "minute", len) == 0 ||
+                         g_ascii_strncasecmp(desc, "mins", len) == 0 ||
+                         g_ascii_strncasecmp(desc, "min", len) == 0 ||
+                         g_ascii_strncasecmp(desc, "m", len) == 0)
+                        *secs += number * 60;
+                else if (g_ascii_strncasecmp(desc, "seconds", len) == 0 ||
+                         g_ascii_strncasecmp(desc, "second", len) == 0 ||
+                         g_ascii_strncasecmp(desc, "secs", len) == 0 ||
+                         g_ascii_strncasecmp(desc, "sec", len) == 0 ||
+                         g_ascii_strncasecmp(desc, "s", len) == 0)
+                        *secs += number;
+                else {
+                        ret = FALSE;
+                }
+
+                /* skip punctuation */
+                while (*time != '\0' && i_ispunct(*time) && *time != '-')
+                        time++;
+
+                if (*time == '\0')
+                        break;
+
+                number = 0;
+                digits = FALSE;
+        }
+
+        return ret;
+}
+
 static int parse_size_uint(const char *size, guint *bytes)
 {
 	const char *desc;
@@ -1025,6 +1191,23 @@ int parse_time_interval(const char *time, int *msecs)
 	return ret;
 }
 
+int parse_time_interval_seconds(const char *time, int *secs)
+{
+        guint secs_;
+        char *number;
+        int ret, sign;
+
+        parse_number_sign(time, &number, &sign);
+
+        ret = parse_time_interval_seconds_uint(number, &secs_);
+
+        if (secs_ > (1U << 31)) {
+                return FALSE;
+        }
+
+        *secs = secs_ * sign;
+        return ret;
+}
 
 char *ascii_strup(char *str)
 {
