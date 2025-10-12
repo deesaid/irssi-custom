@@ -6,7 +6,8 @@ project('irssi', 'c',
 ############################
 ############################
 
-glib_internal_version = 'glib-2.58.3' # keep this in sync with subprojects/glib.wrap
+glib_internal_version = 'glib-2.74.3' # keep this in sync with subprojects/glib.wrap
+glib_pcre2_internal_version = 'pcre2-10.40'
 cc = meson.get_compiler('c')
 rootinc = include_directories('.')
 dep = []
@@ -75,6 +76,16 @@ def_themesdir  = '-D' + 'THEMESDIR'  + '="' + (get_option('prefix') / themedir) 
 def_scriptdir  = '-D' + 'SCRIPTDIR'  + '="' + (get_option('prefix') / scriptdir) + '"'
 
 def_suppress_printf_fallback = '-D' + 'SUPPRESS_PRINTF_FALLBACK'
+
+
+module_suffix = []
+perl_module_suffix = []
+# Meson uses the wrong module extensions on Mac.
+# https://gitlab.gnome.org/GNOME/glib/issues/520
+if ['darwin', 'ios'].contains(host_machine.system())
+  module_suffix = 'so'
+  perl_module_suffix = 'bundle'
+endif
 
 ##############
 # Help files #
@@ -238,7 +249,7 @@ if not glib_dep.found()
   glib_internal_configure_t = custom_target('glib-internal-configure',
     command : [ meson_cmd, 'setup', '--prefix=/irssi-glib-internal',
       '--buildtype=' + get_option('buildtype'),
-      '-Dlibmount=false', '-Dselinux=false', '-Ddefault_library=static', '-Dinternal_pcre=true',
+      '-Dlibmount=disabled', '-Dselinux=disabled', '-Ddefault_library=static', '-Dforce_fallback_for=pcre2',
       glib_internal_configure_args,
       (meson.current_build_dir() / 'build-subprojects' / 'glib'),
       (meson.current_source_dir() / 'subprojects' / glib_internal_version) ],
@@ -247,6 +258,7 @@ if not glib_dep.found()
     depends : glib_internal_download_t,)
   glib_internal_build_t = custom_target('glib-internal-build',
     command : [ ninja, '-C', meson.current_build_dir() / 'build-subprojects' / 'glib',
+      'subprojects' / glib_pcre2_internal_version / 'libpcre2-8.a',
       'glib' / 'libglib-2.0.a',
       'gmodule' / 'libgmodule-2.0.a'],
     console : true,
@@ -260,7 +272,10 @@ if not glib_dep.found()
       '-isystem' + (meson.current_source_dir() / 'subprojects' / glib_internal_version),
       '-isystem' + (meson.current_build_dir() / 'build-subprojects' / 'glib' / 'glib'),
     ],
-    link_args : [ meson.current_build_dir() / 'build-subprojects' / 'glib' / 'glib' / 'libglib-2.0.a' ],
+    link_args : [
+      meson.current_build_dir() / 'build-subprojects' / 'glib' / 'subprojects' / glib_pcre2_internal_version / 'libpcre2-8.a',
+      meson.current_build_dir() / 'build-subprojects' / 'glib' / 'glib' / 'libglib-2.0.a',
+    ],
   )
   built_src += glib_internal_build_t
   libdl_dep = []
@@ -375,6 +390,11 @@ if want_perl
   if perl_version == UNSET
     perl_version = run_command(cross_perl, '-V::version:', check : true).stdout().split('\'')[1]
   endif
+
+  # disable clang warning
+  if perl_version.version_compare('<5.35.2')
+    perl_cflags += cc.get_supported_arguments('-Wno-compound-token-split-by-macro')
+  endif
   perl_dep = declare_dependency(compile_args : perl_cflags, link_args : perl_ldflags,
     version : perl_version)
 
@@ -397,7 +417,7 @@ int main()
   else
     xsubpp_file_c = meson.get_cross_property('perl_xsubpp', UNSET)
     if xsubpp_file_c == UNSET
-      xsubpp_file_c = run_command(build_perl, '-MExtUtils::ParseXS', '-Eprint $INC{"ExtUtils/ParseXS.pm"} =~ s{ParseXS\\.pm$}{xsubpp}r', check : true).stdout()
+      xsubpp_file_c = run_command(build_perl, '-MExtUtils::ParseXS', '-e($r = $INC{"ExtUtils/ParseXS.pm"}) =~ s{ParseXS\\.pm$}{xsubpp}; print $r', check : true).stdout()
     endif
     xsubpp = generator(build_perl,
       output : '@BASENAME@.c',
@@ -549,6 +569,45 @@ foreach h : headers
   endif
 endforeach
 
+if want_textui and conf.get('HAVE_TERM_H', 0) == 1
+  if cc.links('''
+#include <stdio.h>
+#include <term.h>
+int main (void) {
+  return tputs("x", 1, putchar);
+}
+''', args : '-pedantic-errors', dependencies : textui_dep, name : 'Curses working')
+    # ok
+  else
+    has_curses_h = cc.has_header('curses.h')
+    if has_curses_h and cc.links('''
+#include <curses.h>
+#include <term.h>
+int main (void) {
+  return tputs("x", 1, putchar);
+}
+''', args : '-pedantic-errors', dependencies : textui_dep, name : 'Curses working with curses.h')
+      conf.set('NEED_CURSES_H', 1, description : 'tputs needs curses.h')
+    else
+      if has_curses_h and cc.links('''
+#include <curses.h>
+#include <term.h>
+int char_putchar (char c) {
+  return putchar(c);
+}
+int main (void) {
+  return tputs("x", 1, char_putchar);
+}
+''', args : '-pedantic-errors', dependencies : textui_dep, name : 'Curses with tputs third argument arg char')
+        conf.set('NEED_CURSES_H', 1, description : 'tputs needs curses.h')
+        conf.set('TPUTS_SVR4', 1, description : 'third argument of tputs has the type int (*)(char)')
+      else
+        error('could not link terminfo')
+      endif
+    endif
+  endif
+endif
+
 conf.set('HAVE_LIBUTF8PROC', have_libutf8proc)
 conf.set_quoted('PACKAGE_VERSION', package_version)
 conf.set_quoted('PACKAGE_TARNAME', meson.project_name())
@@ -591,12 +650,26 @@ pc_requires = []
 if not glib_internal
   pc_requires += glib_dep
 endif
+signalsfile = docdir / 'signals.txt'
+if signalsfile.startswith('/')
+  signalsfile = signalsfile.split(get_option('prefix'))
+  if signalsfile[0] == ''
+    signalsfile = '${prefix}' + signalsfile[1]
+  else
+    signalsfile = signalsfile[0]
+  endif
+else
+  signalsfile = '${prefix}' / signalsfile
+endif
 pc.generate(filebase : 'irssi-1',
   name : 'Irssi',
   description : 'Irssi chat client',
   version : package_version,
   requires : pc_requires,
-  variables : ['irssimoduledir=${libdir}' / incdir / 'modules'])
+  variables : [
+    'irssimoduledir=${libdir}' / incdir / 'modules',
+    'signalsfile=' + signalsfile
+  ])
 
 ###########
 # irssi.1 #

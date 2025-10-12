@@ -19,6 +19,7 @@
 */
 
 #include "module.h"
+#include <irssi/src/core/misc.h>
 #include <irssi/src/core/levels.h>
 
 /* the order of these levels must match the bits in levels.h */
@@ -169,8 +170,7 @@ char *bits2level(int bits)
         if (str->len > 0)
 		g_string_truncate(str, str->len-1);
 
-	ret = str->str;
-	g_string_free(str, FALSE);
+	ret = g_string_free_and_steal(str);
 
 	return ret;
 }
@@ -184,13 +184,15 @@ int combine_level(int dest, const char *src)
 
 	list = g_strsplit(src, " ", -1);
 	for (item = list; *item != NULL; item++) {
-		itemname = *item + (**item == '+' || **item == '-' ? 1 : 0);
+		itemname = *item + (**item == '+' || **item == '-' || **item == '^' ? 1 : 0);
 		itemlevel = level_get(itemname);
 
-		if (g_strcmp0(itemname, "NONE") == 0)
-                        dest = 0;
+		if (g_ascii_strcasecmp(itemname, "NONE") == 0)
+			dest = 0;
 		else if (**item == '-')
 			dest &= ~(itemlevel);
+		else if (**item == '^')
+			dest ^= itemlevel;
 		else
 			dest |= itemlevel;
 	}

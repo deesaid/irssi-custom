@@ -43,6 +43,7 @@ if [ -z "$name" ] || [ -z "$version" ]; then
     echo "**Error**: ${PKG_NAME} make-dist.sh could not find either name or version, cannot proceed."
     exit 1
 fi
+version=$(echo "$version"|perl -p -e 's/-head/.dev0/')
 
 git log > ChangeLog
 
@@ -80,10 +81,11 @@ echo "Creating sdist..."
 python3 -W ignore -c 'from setuptools import *;setup()' --quiet sdist --formats=tar
 
 tar --delete --file "dist/$name-$version.tar" \
-    "$name-$version/setup.cfg" \
-    "$name-$version/pyproject.toml" \
-    "$name-$version/$name.egg-info" \
-    "$name-$version/PKG-INFO"
+    $(tar tf "dist/$name-$version.tar" | grep -F \
+      "$name-$version/setup.cfg
+$name-$version/pyproject.toml
+$name-$version/$name.egg-info
+$name-$version/PKG-INFO")
 
 echo "Zipping..."
 xz -k "dist/$name-$version.tar"

@@ -128,12 +128,31 @@ static void sig_server_setup_fill_chatnet(IRC_SERVER_CONNECT_REC *conn,
 				conn->sasl_password = g_strdup(ircnet->sasl_password);
 			} else
 				g_warning("The fields sasl_username and sasl_password are either missing or empty");
-		}
-		else if (!g_ascii_strcasecmp(ircnet->sasl_mechanism, "external")) {
+		} else if (!g_ascii_strcasecmp(ircnet->sasl_mechanism, "SCRAM-SHA-1") ||
+		           !g_ascii_strcasecmp(ircnet->sasl_mechanism, "SCRAM-SHA-256") ||
+		           !g_ascii_strcasecmp(ircnet->sasl_mechanism, "SCRAM-SHA-512")) {
+			/* The SCRAM-SHA-* methods need both the username and the password */
+			if (ircnet->sasl_username != NULL && *ircnet->sasl_username &&
+			    ircnet->sasl_password != NULL && *ircnet->sasl_password) {
+				if (!g_ascii_strcasecmp(ircnet->sasl_mechanism, "SCRAM-SHA-1"))
+					conn->sasl_mechanism = SASL_MECHANISM_SCRAM_SHA_1;
+				if (!g_ascii_strcasecmp(ircnet->sasl_mechanism, "SCRAM-SHA-256"))
+					conn->sasl_mechanism = SASL_MECHANISM_SCRAM_SHA_256;
+				if (!g_ascii_strcasecmp(ircnet->sasl_mechanism, "SCRAM-SHA-512"))
+					conn->sasl_mechanism = SASL_MECHANISM_SCRAM_SHA_512;
+
+				conn->sasl_username = g_strdup(ircnet->sasl_username);
+				conn->sasl_password = g_strdup(ircnet->sasl_password);
+			} else
+				g_warning("The fields sasl_username and sasl_password are either "
+				          "missing or empty");
+		} else if (!g_ascii_strcasecmp(ircnet->sasl_mechanism, "external")) {
 			conn->sasl_mechanism = SASL_MECHANISM_EXTERNAL;
+		} else {
+			g_warning("Unsupported SASL mechanism \"%s\" selected",
+			          ircnet->sasl_mechanism);
+			conn->sasl_mechanism = SASL_MECHANISM_MAX;
 		}
-		else
-			g_warning("Unsupported SASL mechanism \"%s\" selected", ircnet->sasl_mechanism);
 	}
 }
 
@@ -220,9 +239,11 @@ static void sig_server_setup_saved(IRC_SERVER_SETUP_REC *rec,
 		iconfig_node_set_int(node, "cmd_queue_speed", rec->cmd_queue_speed);
 	if (rec->max_query_chans > 0)
 		iconfig_node_set_int(node, "max_query_chans", rec->max_query_chans);
-	if (rec->starttls != STARTTLS_NOTSET)
-		iconfig_node_set_bool(node, "starttls", rec->starttls);
-	else
+	if (rec->starttls == STARTTLS_DISALLOW)
+		iconfig_node_set_bool(node, "starttls", FALSE);
+	else if (rec->starttls == STARTTLS_ENABLED)
+		iconfig_node_set_bool(node, "starttls", TRUE);
+	else if (rec->starttls == STARTTLS_NOTSET)
 		iconfig_node_set_str(node, "starttls", NULL);
 	if (rec->no_cap)
 		iconfig_node_set_bool(node, "no_cap", TRUE);

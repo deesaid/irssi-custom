@@ -239,9 +239,8 @@ char *perl_get_use_list(void)
 	for (tmp = use_protocols; tmp != NULL; tmp = tmp->next)
 		g_string_append_printf(str, "use Irssi::%s;", (char *) tmp->data);
 
-	ret = str->str;
-        g_string_free(str, FALSE);
-        return ret;
+	ret = g_string_free_and_steal(str);
+	return ret;
 }
 
 void irssi_callXS(void (*subaddr)(pTHX_ CV* cv), CV *cv, SV **mark)
@@ -287,6 +286,8 @@ void perl_connect_fill_hash(HV *hv, SERVER_CONNECT_REC *conn)
 	(void) hv_store(hv, "type", 4, new_pv(type), 0);
 	(void) hv_store(hv, "chat_type", 9, new_pv(chat_type), 0);
 
+	(void) hv_store(hv, "chosen_family", 13, newSViv(conn->chosen_family), 0);
+	(void) hv_store(hv, "ipaddr", 6, new_pv(conn->ipaddr), 0);
 	(void) hv_store(hv, "tag", 3, new_pv(conn->tag), 0);
 	(void) hv_store(hv, "address", 7, new_pv(conn->address), 0);
 	(void) hv_store(hv, "port", 4, newSViv(conn->port), 0);

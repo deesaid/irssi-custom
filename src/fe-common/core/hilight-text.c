@@ -469,8 +469,7 @@ static void sig_print_text(TEXT_DEST_REC *dest, const char *text,
 		}
 		g_string_append(str, text + pos);
 
-		newstr = str->str;
-		g_string_free(str, FALSE);
+		newstr = g_string_free_and_steal(str);
 
 		format_dest_meta_stash(dest, "hilight-start",
 		                       tmp = g_strdup_printf("%d", hilight_start));
@@ -626,7 +625,7 @@ static void cmd_hilight_show(void)
 }
 
 /* SYNTAX: HILIGHT [-nick | -word | -line] [-mask | -full | -matchcase | -regexp]
-   [-color <color>] [-actcolor <color>] [-level <level>]
+   [-color <color>] [-actcolor <color>] [-level <level>] [-priority <number>]
    [-network <network>] [-channels <channels>] <text> */
 static void cmd_hilight(const char *data)
 {

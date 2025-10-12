@@ -26,6 +26,15 @@
 #define CONFIG_INDENT_SIZE 2
 static const char *indent_block = "  "; /* needs to be the same size as CONFIG_INDENT_SIZE! */
 
+#if GLIB_CHECK_VERSION(2, 76, 0)
+/* nothing */
+#else
+static gchar *g_string_free_and_steal(GString *string)
+{
+	return g_string_free(string, FALSE);
+}
+#endif
+
 /* write needed amount of indentation to the start of the line */
 static int config_write_indent(CONFIG_REC *rec)
 {
@@ -108,8 +117,7 @@ static char *config_escape_string(const char *text)
 
 	g_string_append_c(str, '"');
 
-	ret = str->str;
-	g_string_free(str, FALSE);
+	ret = g_string_free_and_steal(str);
 	return ret;
 }
 
@@ -305,6 +313,9 @@ int config_write(CONFIG_REC *rec, const char *fname, int create_mode)
 	const char *base_name;
 	char *tmp_name = NULL;
 	char *dest_name = NULL;
+#if !defined(_POSIX_VERSION) || _POSIX_VERSION < 200809L
+	char resolved_path[PATH_MAX] = { 0 };
+#endif
 
 	g_return_val_if_fail(rec != NULL, -1);
         g_return_val_if_fail(fname != NULL || rec->fname != NULL, -1);
@@ -313,16 +324,15 @@ int config_write(CONFIG_REC *rec, const char *fname, int create_mode)
 	base_name = fname != NULL ? fname : rec->fname;
 
 	/* expand all symlinks; else we may replace a symlink with a regular file */
-	dest_name = realpath(base_name, NULL);
-
-	if (errno == EINVAL) {
-		/* variable path length not supported by glibc < 2.3, Solaris < 11 */
-		char resolved_path[PATH_MAX] = { 0 };
-		errno = 0;
-		if ((dest_name = realpath(base_name, resolved_path)) != NULL) {
-			dest_name = g_strdup(dest_name);
-		}
+#if !defined(_POSIX_VERSION) || _POSIX_VERSION < 200809L
+	/* variable path length not supported by glibc < 2.3, Solaris < 11 */
+	errno = 0;
+	if ((dest_name = realpath(base_name, resolved_path)) != NULL) {
+		dest_name = g_strdup(dest_name);
 	}
+#else
+	dest_name = realpath(base_name, NULL);
+#endif
 
 	if (dest_name == NULL) {
 		if (errno == ENOENT) {

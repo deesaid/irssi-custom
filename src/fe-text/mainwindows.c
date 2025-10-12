@@ -233,8 +233,10 @@ MAIN_WINDOW_REC *mainwindow_create(int right)
 			if (MAIN_WINDOW_TEXT_HEIGHT(parent) <
 			    WINDOW_MIN_SIZE+NEW_WINDOW_SIZE)
 				parent = find_window_with_room();
-			if (parent == NULL)
+			if (parent == NULL) {
+				g_free(rec);
 				return NULL; /* not enough space */
+			}
 
 			space = parent->height / 2;
 			rec->first_line = parent->first_line;
@@ -255,8 +257,10 @@ MAIN_WINDOW_REC *mainwindow_create(int right)
 			if (MAIN_WINDOW_TEXT_WIDTH(parent) < 2 * NEW_WINDOW_WIDTH) {
 				parent = find_window_with_room_right();
 			}
-			if (parent == NULL)
+			if (parent == NULL) {
+				g_free(rec);
 				return NULL; /* not enough space */
+			}
 
 			space = parent->width / 2;
 			rec->first_line = parent->first_line;
@@ -1629,6 +1633,7 @@ static int window_refnum_left(int refnum, int wrap)
 {
         MAIN_WINDOW_REC *find_sticky;
 	WINDOW_REC *window;
+	int start_refnum = refnum;
 
 	window = window_find_refnum(refnum);
 	g_return_val_if_fail(window != NULL, -1);
@@ -1638,7 +1643,7 @@ static int window_refnum_left(int refnum, int wrap)
 
 	do {
 		refnum = window_refnum_prev(refnum, wrap);
-		if (refnum < 0)
+		if (refnum < 0 || refnum == start_refnum)
 			break;
 
 		window = window_find_refnum(refnum);
@@ -1651,6 +1656,7 @@ static int window_refnum_right(int refnum, int wrap)
 {
         MAIN_WINDOW_REC *find_sticky;
 	WINDOW_REC *window;
+	int start_refnum = refnum;
 
 	window = window_find_refnum(refnum);
 	g_return_val_if_fail(window != NULL, -1);
@@ -1660,7 +1666,7 @@ static int window_refnum_right(int refnum, int wrap)
 
 	do {
 		refnum = window_refnum_next(refnum, wrap);
-		if (refnum < 0)
+		if (refnum < 0 || refnum == start_refnum)
 			break;
 
 		window = window_find_refnum(refnum);
