@@ -480,6 +480,45 @@ static void event_whisper(IRC_SERVER_REC *server, const char *data,
         printtext(server, NULL, MSGLEVEL_HILIGHT, "@%s :%s!%s WHISPER %s", tags, nick, addr, data);
 }
 
+static void event_usernotice(IRC_SERVER_REC *server, const char *data,
+                           const char *nick, const char *addr, const char *tags)
+{
+        // TODO: Mejorar
+        //printtext(server, NULL, MSGLEVEL_HILIGHT, "@%s :%s!%s USERNOTICE %s", tags, nick, addr, data);
+        char *params, *target, *msg, *recoded;
+
+        g_return_if_fail(data != NULL);
+
+        params = event_get_params(data, 2 | PARAM_FLAG_GETREST, &target, &msg);
+        if (nick == NULL) nick = server->real_address;
+        if (addr == NULL) addr = "";
+
+        if (fe_channel_is_opchannel(server, target)) {
+                /* Hybrid 6 feature, send msg to all ops in channel */
+                const char *cleantarget = fe_channel_skip_prefix(server, target);
+                recoded = recode_in(SERVER(server), msg, cleantarget);
+
+                /* pass the original target to the signal, with the @+ here
+                 * the other one is only needed for recode_in*/
+                signal_emit("message irc op_public", 5,
+                            server, recoded, nick, addr, target);
+        } else {
+                recoded = recode_in(SERVER(server), msg, server_ischannel(SERVER(server), target) ? target : nick);
+                signal_emit(server_ischannel(SERVER(server), target) ?
+                            "message irc action" : "message private", 5,
+                            server, recoded, nick, addr,
+                            get_visible_target(server, target));
+        }
+
+        g_free(params);
+        g_free(recoded);
+}
+
+static void event_eventignore(IRC_SERVER_REC *server, const char *data,
+                           const char *nick, const char *addr, const char *tags)
+{
+}
+
 static void event_received(IRC_SERVER_REC *server, const char *data,
 			   const char *nick, const char *addr, const char *tags)
 {
@@ -522,6 +561,11 @@ void fe_events_init(void)
 	signal_add("event silence", (SIGNAL_FUNC) event_silence);
 	signal_add("event away", (SIGNAL_FUNC) event_away_notify);
 	signal_add("event whisper", (SIGNAL_FUNC) event_whisper);
+	signal_add("event usernotice", (SIGNAL_FUNC) event_usernotice);
+	signal_add("event userstate", (SIGNAL_FUNC) event_eventignore);
+	signal_add("event roomstate", (SIGNAL_FUNC) event_eventignore);
+	signal_add("event clearchat", (SIGNAL_FUNC) event_eventignore);
+	signal_add("event clearmsg", (SIGNAL_FUNC) event_eventignore);
 
 	signal_add("default event", (SIGNAL_FUNC) event_received);
 
@@ -555,6 +599,11 @@ void fe_events_deinit(void)
 	signal_remove("event silence", (SIGNAL_FUNC) event_silence);
 	signal_remove("event away", (SIGNAL_FUNC) event_away_notify);
 	signal_remove("event whisper", (SIGNAL_FUNC) event_whisper);
+	signal_remove("event usernotice", (SIGNAL_FUNC) event_usernotice);
+        signal_remove("event userstate", (SIGNAL_FUNC) event_eventignore);
+        signal_remove("event roomstate", (SIGNAL_FUNC) event_eventignore);
+        signal_remove("event clearchat", (SIGNAL_FUNC) event_eventignore);
+        signal_remove("event clearmsg", (SIGNAL_FUNC) event_eventignore);
 
 	signal_remove("default event", (SIGNAL_FUNC) event_received);
 
