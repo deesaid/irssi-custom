@@ -19,6 +19,7 @@
 */
 
 #include "module.h"
+#include "misc-twitch.h"
 #include <irssi/src/fe-common/irc/module-formats.h>
 #include <irssi/src/core/signals.h>
 #include <irssi/src/core/misc.h>
@@ -480,6 +481,46 @@ static void event_whisper(IRC_SERVER_REC *server, const char *data,
         printtext(server, NULL, MSGLEVEL_HILIGHT, "@%s :%s!%s WHISPER %s", tags, nick, addr, data);
 }
 
+static void event_usernotice(IRC_SERVER_REC *server, const char *data,
+                           const char *nick, const char *addr, const char *tags)
+{
+        // TODO: Mejorar
+        char *target, *msg, *recoded, *login = NULL, *sysmsg = NULL, *compmsg = NULL;
+	GString *auxStr;
+
+        g_return_if_fail(data != NULL);
+
+	twitch_extract_login_and_systemmsg(tags, &login, &sysmsg);
+
+        event_get_params(data, 2 | PARAM_FLAG_GETREST, &target, &msg);
+	nick = login;
+        if (nick == NULL || (sysmsg != NULL && *sysmsg != '\0')) nick = server->real_address;
+        if (addr == NULL) addr = server->real_address;
+
+        auxStr = g_string_new(NULL);
+	g_string_append_printf(auxStr, "%s%s%s", 
+                                        (sysmsg != NULL && *sysmsg != '\0' ? sysmsg : ""), 
+                                        (msg != NULL && *msg != '\0' ? ": " : ""),
+                                        (msg != NULL && *msg != '\0' ? msg : ""));
+	compmsg = g_string_free_and_steal(auxStr);
+
+        recoded = recode_in(SERVER(server), compmsg, nick);
+        signal_emit(server_ischannel(SERVER(server), target) ?
+                    "message irc action" : "message private", 5,
+                    server, recoded, nick, addr,
+                    get_visible_target(server, target));
+
+        g_free(sysmsg);
+        g_free(login);
+        g_free(compmsg);
+        g_free(recoded);
+}
+
+static void event_eventignore(IRC_SERVER_REC *server, const char *data,
+                           const char *nick, const char *addr, const char *tags)
+{
+}
+
 static void event_received(IRC_SERVER_REC *server, const char *data,
 			   const char *nick, const char *addr, const char *tags)
 {
@@ -522,6 +563,11 @@ void fe_events_init(void)
 	signal_add("event silence", (SIGNAL_FUNC) event_silence);
 	signal_add("event away", (SIGNAL_FUNC) event_away_notify);
 	signal_add("event whisper", (SIGNAL_FUNC) event_whisper);
+	signal_add("event usernotice", (SIGNAL_FUNC) event_usernotice);
+	signal_add("event userstate", (SIGNAL_FUNC) event_eventignore);
+	signal_add("event roomstate", (SIGNAL_FUNC) event_eventignore);
+	signal_add("event clearchat", (SIGNAL_FUNC) event_eventignore);
+	signal_add("event clearmsg", (SIGNAL_FUNC) event_eventignore);
 
 	signal_add("default event", (SIGNAL_FUNC) event_received);
 
@@ -555,6 +601,11 @@ void fe_events_deinit(void)
 	signal_remove("event silence", (SIGNAL_FUNC) event_silence);
 	signal_remove("event away", (SIGNAL_FUNC) event_away_notify);
 	signal_remove("event whisper", (SIGNAL_FUNC) event_whisper);
+	signal_remove("event usernotice", (SIGNAL_FUNC) event_usernotice);
+        signal_remove("event userstate", (SIGNAL_FUNC) event_eventignore);
+        signal_remove("event roomstate", (SIGNAL_FUNC) event_eventignore);
+        signal_remove("event clearchat", (SIGNAL_FUNC) event_eventignore);
+        signal_remove("event clearmsg", (SIGNAL_FUNC) event_eventignore);
 
 	signal_remove("default event", (SIGNAL_FUNC) event_received);
 
