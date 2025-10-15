@@ -19,6 +19,7 @@
 */
 
 #include "module.h"
+#include "misc-twitch.h"
 #include <irssi/src/fe-common/irc/module-formats.h>
 #include <irssi/src/core/signals.h>
 #include <irssi/src/core/misc.h>
@@ -484,33 +485,34 @@ static void event_usernotice(IRC_SERVER_REC *server, const char *data,
                            const char *nick, const char *addr, const char *tags)
 {
         // TODO: Mejorar
-        //printtext(server, NULL, MSGLEVEL_HILIGHT, "@%s :%s!%s USERNOTICE %s", tags, nick, addr, data);
-        char *params, *target, *msg, *recoded;
+        char *target, *msg, *recoded, *login = NULL, *sysmsg = NULL, *compmsg = NULL;
+	GString *auxStr;
 
         g_return_if_fail(data != NULL);
 
-        params = event_get_params(data, 2 | PARAM_FLAG_GETREST, &target, &msg);
-        if (nick == NULL) nick = server->real_address;
-        if (addr == NULL) addr = "";
+	twitch_extract_login_and_systemmsg(tags, &login, &sysmsg);
 
-        if (fe_channel_is_opchannel(server, target)) {
-                /* Hybrid 6 feature, send msg to all ops in channel */
-                const char *cleantarget = fe_channel_skip_prefix(server, target);
-                recoded = recode_in(SERVER(server), msg, cleantarget);
+        event_get_params(data, 2 | PARAM_FLAG_GETREST, &target, &msg);
+	nick = login;
+        if (nick == NULL || (sysmsg != NULL && *sysmsg != '\0')) nick = server->real_address;
+        if (addr == NULL) addr = server->real_address;
 
-                /* pass the original target to the signal, with the @+ here
-                 * the other one is only needed for recode_in*/
-                signal_emit("message irc op_public", 5,
-                            server, recoded, nick, addr, target);
-        } else {
-                recoded = recode_in(SERVER(server), msg, server_ischannel(SERVER(server), target) ? target : nick);
-                signal_emit(server_ischannel(SERVER(server), target) ?
-                            "message irc action" : "message private", 5,
-                            server, recoded, nick, addr,
-                            get_visible_target(server, target));
-        }
+        auxStr = g_string_new(NULL);
+	g_string_append_printf(auxStr, "%s%s%s", 
+                                        (sysmsg != NULL && *sysmsg != '\0' ? sysmsg : ""), 
+                                        (msg != NULL && *msg != '\0' ? ": " : ""),
+                                        (msg != NULL && *msg != '\0' ? msg : ""));
+	compmsg = g_string_free_and_steal(auxStr);
 
-        g_free(params);
+        recoded = recode_in(SERVER(server), compmsg, nick);
+        signal_emit(server_ischannel(SERVER(server), target) ?
+                    "message irc action" : "message private", 5,
+                    server, recoded, nick, addr,
+                    get_visible_target(server, target));
+
+        g_free(sysmsg);
+        g_free(login);
+        g_free(compmsg);
         g_free(recoded);
 }
 
